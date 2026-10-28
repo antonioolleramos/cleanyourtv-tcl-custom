@@ -8,6 +8,28 @@ O objetivo foi simplificar a tela inicial de uma Smart TV com hardware limitado,
 
 Na tela inicial, ficam visíveis apenas o papel de parede configurado pelo usuário, o relógio, a data, o clima e os atalhos superiores. A grade de aplicativos aparece ao pressionar **↓** no controle remoto e é ocultada com **Voltar** ou **↑** na primeira linha. Ao abrir a Home, nenhum botão superior fica destacado.
 
+<!-- INICIO GALERIA TCL -->
+## Demonstração na TV real
+
+### Tela inicial limpa
+
+![Home personalizada do CleanYourTV: relógio e clima sobre o wallpaper](docs/images/home-limpa.jpg)
+
+Relógio, data e clima em destaque. Os aplicativos ficam ocultos até pressionar **↓** no controle remoto.
+
+### Aplicativos ao pressionar ↓
+
+![Grade de aplicativos exibida após pressionar a seta para baixo](docs/images/aplicativos-abertos.jpg)
+
+A grade pode ser exibida e ocultada sem fechar os serviços essenciais da televisão.
+
+### Comparativo de memória e armazenamento
+
+![Comparativo de métricas antes e depois da personalização](docs/images/comparativo-memoria.jpg)
+
+> **Nota metodológica:** são medições pontuais em condições distintas. A redução da memória PSS do launcher e a liberação de armazenamento são observações relevantes; os valores de RAM disponível variam conforme os aplicativos abertos. A queda de swap foi observada após reiniciar a TV e não deve ser interpretada isoladamente como ganho permanente de desempenho. Não há benchmark controlado que comprove um percentual de aumento de velocidade.
+<!-- FIM GALERIA TCL -->
+
 ## O que foi personalizado
 
 - **Tela inicial minimalista** com relógio e data centralizados.
