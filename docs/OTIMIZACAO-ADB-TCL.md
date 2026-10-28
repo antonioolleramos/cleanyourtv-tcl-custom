@@ -6,7 +6,7 @@ Este fork tem **duas partes distintas**: (1) alterações do launcher CleanYourT
 
 ## 1. O que foi observado
 
-O responsável pela TV relatou que os travamentos que ocorriam no sistema original **deixaram de aparecer no uso após a otimização** e que a navegação ficou mais fluida. As medições foram feitas **logo após ligar/reiniciar a TV em AMBOS os estados**: antes da limpeza, ainda com o launcher original, e depois da substituição do launcher e das mudanças via ADB.
+O proprietário relatou que, após a otimização, **o sistema ficou muito mais leve, os aplicativos passaram a abrir mais rapidamente, a navegação ficou mais fluida e os travamentos do sistema original deixaram de ocorrer**. Essas mudanças foram percebidas no uso real, após combinar launcher personalizado, desativação de recursos dispensáveis e animações em `0.0`. As medições foram feitas **logo após ligar/reiniciar a TV em AMBOS os estados**: antes, com o launcher original, e depois, com a Home personalizada e as mudanças via ADB.
 
 | Métrica | Original: logo após ligar | Otimizada: logo após ligar | Diferença |
 | --- | ---: | ---: | ---: |
@@ -47,6 +47,8 @@ A personalização foi feita a partir do [CleanYourTV v3.1.0](https://github.com
 
 ## 4. Pacotes envolvidos na limpeza
 
+A limpeza procurou eliminar a sobrecarga de **componentes não utilizados**: recomendações e widgets da Home antiga, serviços de personalização TCL, diagnósticos, assistente e voz, aplicativos legados e recursos opcionais. Menos componentes desnecessários podem reduzir atividades e consumo de recursos; na TV testada, isso integrou a otimização após a qual os apps passaram a abrir mais rápido e a navegação ficou mais fluida. **Não há medição isolada do impacto de cada pacote**.
+
 A relação abaixo foi **consolidada a partir do histórico da sessão**. No trecho de terminal preservado, há confirmação explícita da resposta `new state: disabled-user` para **`com.google.android.katniss`**, **`com.google.android.speech.pumpkin`**, **`com.tcl.tvweishi`** e **`com.tcl.partnercustomizer`**. Os outros nomes aparecem no registro consolidado das alterações da mesma sessão, mas não dispomos neste repositório de uma captura integral do comando/retorno de cada um. Assim, a lista **não deve ser interpretada como auditoria atual do estado de todos os pacotes**.
 
 | ID do pacote | Identificação / propósito | Atenção |
@@ -72,8 +74,6 @@ A relação abaixo foi **consolidada a partir do histórico da sessão**. No tre
 | `com.android.printspooler` | Spooler de impressão — Impressão no Android | Opcional conforme uso |
 | `com.google.android.tts` | Síntese de fala do Google — Voz sintetizada; pode afetar acessibilidade | ⚠️ Pode afetar função importante |
 | `com.google.android.marvin.talkback` | TalkBack — Leitor de tela; essencial a quem usa acessibilidade | ⚠️ Pode afetar função importante |
-
-**Aplicativos retirados da experiência de uso na limpeza:** Claro TV+ (`com.claro.now.smarttvclient`) e Pluto TV (`tv.pluto.android`). O histórico indica que foram removidos/dispensados, mas não contém os comandos completos que permitam afirmar se foram **desativados** ou **desinstalados somente para o usuário 0**. Não houve comprovação de remoção física da partição do sistema.
 
 ### Como conferir o estado antes de alterar
 
@@ -119,21 +119,28 @@ adb shell settings get global transition_animation_scale
 adb shell settings get global animator_duration_scale
 ```
 
-O histórico contém leituras `0.0` e, posteriormente, comandos que ajustaram **as três escalas para `0.5`**. Não foi preservada uma nova leitura final que permita afirmar com segurança qual valor permaneceu na TV. Para ajustar conscientemente, escolha UMA opção:
+**Configuração final adotada e confirmada pelo proprietário: `0.0` nas três escalas (animações desativadas).** Os registros mostram que `0.5` também foi experimentado durante os ajustes, mas **não foi o valor mantido ao final**. Para reproduzir a configuração final da TV:
 
 ```powershell
-# Opção A: animações desativadas (0)
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 
-# Opção B: animações mais curtas (0.5)
-adb shell settings put global window_animation_scale 0.5
-adb shell settings put global transition_animation_scale 0.5
-adb shell settings put global animator_duration_scale 0.5
+# Confirme o estado:
+adb shell settings get global window_animation_scale
+adb shell settings get global transition_animation_scale
+adb shell settings get global animator_duration_scale
 ```
 
-Esses ajustes alteram **o tempo das transições visuais**, não a frequência da CPU nem a quantidade física de RAM. Reduzir animações pode melhorar a percepção de agilidade, mas não deve ser confundido com o ganho medido de memória.
+Para **restaurar as animações padrão do Android** caso prefira:
+
+```powershell
+adb shell settings put global window_animation_scale 1
+adb shell settings put global transition_animation_scale 1
+adb shell settings put global animator_duration_scale 1
+```
+
+Desligar animações elimina o tempo das transições visuais e contribui para a sensação de maior agilidade, **mas não aumenta a frequência da CPU nem a RAM física**. A melhora de memória medida é consequência do conjunto de alterações, não desse ajuste isolado.
 
 ## 6. Serviços e funções preservados
 
