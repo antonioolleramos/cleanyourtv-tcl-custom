@@ -138,6 +138,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private AppAdapter adapter;
     private RecyclerView grid;
+    // Personalizacao TCL: wallpaper limpo, clima e apps por seta ↓.
+    private TclHomeCustom tclCustom;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
     private GlassView glass;
@@ -379,6 +381,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (festive) updateWifiLabel();
             sky.update();
             wallpaperPlayer.update();
+            if (tclCustom != null) tclCustom.maybeFetchWeather();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -843,6 +846,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     .build(), vpnCallback);
         }
         // Not after recreate(): the launch intent survives it and would open the settings again.
+        tclCustom = new TclHomeCustom(this, root, grid, clockBlock, findViewById(R.id.topButtons));
+        tclCustom.hideApps();
         if (savedInstanceState == null && !openLauncherSettingsIfAsked(getIntent())) openInputsIfAsked(getIntent());
     }
 
@@ -914,6 +919,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openLauncherSettingsIfAsked(intent)) return;
         if (openInputsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        if (tclCustom != null) tclCustom.hideApps();
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -922,7 +928,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             // Still on screen (the quick panel was over it, or Home was already in front): the tiles are current,
             // so only go back to the first one; rebuilding would replay the entrance animation for nothing.
-            grid.post(() -> focusTile(0));
+            grid.post(() -> { if (tclCustom == null || !tclCustom.isHidden()) focusTile(0); });
         }
     }
 
@@ -988,6 +994,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
+        if (tclCustom != null) {
+            tclCustom.hideApps();
+            tclCustom.maybeFetchWeather();
+        }
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
             diya.start();
@@ -1273,6 +1283,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return true;
             }
         }
+        // TCL: a seta para baixo revela os aplicativos; Voltar retorna ao wallpaper.
+        if (tclCustom != null && !reordering && appLibrary == null
+                && openPopup == null && cardPrompt == null) {
+            int k = event.getKeyCode();
+            // Com a Home limpa, seta para cima da acesso aos atalhos superiores.
+            // O foco invisivel nao interfere no uso das setas dentro do topo.
+            if (tclCustom.isHidden() && tclCustom.hasParkedFocus()
+                    && k == KeyEvent.KEYCODE_DPAD_UP) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN
+                        && event.getRepeatCount() == 0) {
+                    View settingsButton = findViewById(R.id.btnSettings);
+                    if (settingsButton != null) settingsButton.requestFocus();
+                }
+                return true;
+            }
+            // Voltar, quando um botao superior esta selecionado, limpa o destaque.
+            if (tclCustom.isHidden() && (k == KeyEvent.KEYCODE_BACK
+                    || k == KeyEvent.KEYCODE_ESCAPE)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN) tclCustom.hideApps();
+                return true;
+            }
+            if (tclCustom.isHidden() && k == KeyEvent.KEYCODE_DPAD_DOWN) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                    tclCustom.showApps();
+                    grid.post(() -> focusTile(0));
+                }
+                return true;
+            }
+            if (!tclCustom.isHidden() && (k == KeyEvent.KEYCODE_BACK || k == KeyEvent.KEYCODE_ESCAPE)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN) tclCustom.hideApps();
+                return true;
+            }
+        }
         if (!reordering) return super.dispatchKeyEvent(event);
         if (dockEditing) return dispatchDockEdit(event);
         boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
@@ -1339,6 +1382,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The start shared by reorder and edit-dock mode. False when there is nothing to move. */
     private boolean beginReorder() {
+        if (tclCustom != null) tclCustom.showApps();
         if (adapter.movableCount() < 2) return false;
         // Before the reload below: once it has dropped the empty slots, the dock row also shows grid apps.
         dockInSession = new HashSet<>();
@@ -1588,7 +1632,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onBackPressed() {
-        // Home screen: Back goes nowhere.
+        if (tclCustom != null && !tclCustom.isHidden()) {
+            tclCustom.hideApps();
+        }
+        // Home screen: Back otherwise goes nowhere.
     }
 
     // ---- glass highlight -------------------------------------------------------------------------
@@ -2246,6 +2293,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public boolean onTileVerticalKey(int position, int keyCode) {
+        // Subir a partir da primeira linha volta para o papel de parede.
+        if (tclCustom != null && !tclCustom.isHidden()
+                && keyCode == KeyEvent.KEYCODE_DPAD_UP && position < COLUMNS) {
+            tclCustom.hideApps();
+            return true;
+        }
         int count = adapter.appCount();
         int target;
         if (singleRow) {
