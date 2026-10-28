@@ -1,10 +1,14 @@
 # CleanYourTV — TCL Custom Home
 
+**SEMP TCL 32S6500S · Android TV 9 · Interface personalizada + otimização real do sistema**
+
+**Resultado na TV testada:** interface mais fluida e, conforme o uso relatado pelo responsável, **os travamentos que aconteciam antes da otimização deixaram de ocorrer**. Também medimos mais RAM disponível, redução do consumo do launcher e liberação de armazenamento. Veja abaixo os números, os pacotes envolvidos e o procedimento para reproduzir com cautela.
+
 > Personalização do launcher open-source [CleanYourTV](https://github.com/Gathin23/cleanyourtv), baseada na versão **v3.1.0** e testada em uma **SEMP TCL 32S6500S (Android TV 9)**. Este repositório é um **fork com modificações**, não um launcher desenvolvido do zero.
 
 ## Visão geral
 
-O objetivo foi simplificar a tela inicial de uma Smart TV com hardware limitado, preservando recursos como aplicativos de streaming, Chromecast, entradas HDMI, Wi-Fi e configurações da TV.
+A otimização reuniu **duas frentes complementares**: substituição da Home por uma versão personalizada do CleanYourTV **e** limpeza manual de aplicativos/serviços dispensáveis via ADB, com ajustes das animações do Android. O objetivo foi reduzir a carga sobre o hardware limitado desta TV sem perder streaming, cast, HDMI, Wi-Fi e configurações.
 
 Na tela inicial, ficam visíveis apenas o papel de parede configurado pelo usuário, o relógio, a data, o clima e os atalhos superiores. A grade de aplicativos aparece ao pressionar **↓** no controle remoto e é ocultada com **Voltar** ou **↑** na primeira linha. Ao abrir a Home, nenhum botão superior fica destacado.
 
@@ -27,42 +31,89 @@ A grade pode ser exibida e ocultada sem fechar os serviços essenciais da televi
 
 ![Comparativo de métricas antes e depois da personalização](docs/images/comparativo-memoria.jpg)
 
-> **Nota metodológica:** são medições pontuais em condições distintas. A redução da memória PSS do launcher e a liberação de armazenamento são observações relevantes; os valores de RAM disponível variam conforme os aplicativos abertos. A queda de swap foi observada após reiniciar a TV e não deve ser interpretada isoladamente como ganho permanente de desempenho. Não há benchmark controlado que comprove um percentual de aumento de velocidade.
+> **Importante sobre o teste:** as **duas** medições — original e otimizada — foram realizadas **logo após ligar/reiniciar a TV**, em cada uma das situações. A imagem usa a legenda "Após reiniciar" para o resultado otimizado, mas **o original também foi medido depois de ligar a TV**. Com isso, a comparação é mais coerente do que confrontar uma sessão longa com uma recém-reiniciada. Ainda não é um benchmark cronometrado e repetido.
 <!-- FIM GALERIA TCL -->
 
-## O que foi personalizado
+## O que foi feito na TV
 
-- **Tela inicial minimalista** com relógio e data centralizados.
-- **Aplicativos ocultos por padrão**, com navegação por controle remoto e sem recriar a grade a cada abertura.
-- **Foco inicial invisível**, para evitar destaque na engrenagem ou nos botões superiores.
-- **Clima de Rio Grande (RS)** integrado ao topo da Home, com dados da API pública [Open-Meteo](https://open-meteo.com/), consulta limitada a uma vez por hora e tentativa posterior em caso de falha.
-- **Preservação de entradas, Wi-Fi e configurações** do launcher original.
-- **Sem animações novas ou serviços de clima em segundo plano**.
+### 1. Substituição e personalização do launcher
 
-### Arquivos modificados
+- Instalamos uma versão compilada e personalizada do **CleanYourTV v3.1.0**, substituindo a Home antiga (`com.google.android.tvlauncher`) pela `com.gathin.tvhome`.
+- **Tela inicial minimalista:** wallpaper pessoal, relógio e data centralizados, sem elementos extras cobrindo a imagem.
+- **Aplicativos ocultos por padrão:** seta **↓** abre a grade; **Voltar** ou **↑** na primeira linha a escondem. A grade é ocultada sem ser recriada toda vez.
+- **Sem botão destacado inicialmente:** foco colocado em elemento transparente ao voltar à Home.
+- **Clima de Rio Grande (RS)** no topo, obtido via [Open-Meteo](https://open-meteo.com/), consultado no máximo uma vez por hora e com nova tentativa em caso de falha. Consulta feita em uma thread curta, não em serviço persistente em segundo plano.
+- **Entradas, Wi-Fi e Configurações** continuam disponíveis na barra superior; streaming e Chromecast foram preservados.
+- Escondemos elementos decorativos da interface original, mantendo o launcher leve e sem novas animações adicionadas.
 
-| Arquivo | Função |
+| Arquivo alterado | Papel |
 | --- | --- |
-| `launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java` | Navegação e estados da tela inicial |
-| `launcher/app/src/main/java/com/gathin/tvhome/TclHomeCustom.java` | Interface personalizada, relógio, clima e controle de visibilidade |
-| `launcher/app/src/main/AndroidManifest.xml` | Permissão de rede necessária para consultar o clima |
+| `launcher/app/src/main/java/com/gathin/tvhome/MainActivity.java` | Integração da Home personalizada, controle remoto e navegação |
+| `launcher/app/src/main/java/com/gathin/tvhome/TclHomeCustom.java` | Layout centralizado, relógio/data, clima, foco e grade |
+| `launcher/app/src/main/AndroidManifest.xml` | Permissão de internet para o clima |
 
-O papel de parede é configurado separadamente por tema e **não é distribuído neste repositório**.
+> O wallpaper é configurado separadamente na TV: **não** faz parte do código nem é distribuído como arquivo de tema neste repositório.
 
-## Resultados observados
+### 2. Limpeza do Android TV via ADB (debloat)
 
-Medições realizadas na TV durante o processo de personalização e limpeza do sistema:
+Além do launcher, **desativamos pacotes de interface antiga, recomendações, assistente de voz e serviços opcionais da TCL/Google**. Isso foi feito **manualmente na TV**, não por este aplicativo. A lista consolidada do trabalho inclui:
 
-| Indicador | Registro inicial | Registro após otimização |
-| --- | ---: | ---: |
-| RAM disponível (`MemAvailable`) | ~712 MiB | ~867 MiB |
-| Memória PSS do launcher | ~68 MiB (launcher original) | ~20 MiB (CleanYourTV) |
-| Ocupação da partição de dados | 85% | 74% |
-| Espaço livre em `/data` | ~630 MB | ~1,0 GB |
+| Pacote | O que representa | Atenção |
+| --- | --- | --- |
+| `com.google.android.tvlauncher` | Launcher original Google Android TV | ⚠️ Impacto funcional possível |
+| `com.tcl.appmarket2` | Loja de aplicativos TCL | Dispensável conforme uso |
+| `com.google.android.tvrecommendations` | Recomendações Android TV | Dispensável conforme uso |
+| `com.tcl.bi` | Serviço TCL BI | Dispensável conforme uso |
+| `com.google.android.feedback` | Feedback do Google | Dispensável conforme uso |
+| `com.tcl.esticker` | TCL eSticker | Dispensável conforme uso |
+| `com.google.android.music` | Google Play Música | Dispensável conforme uso |
+| `com.google.android.videos` | Google Play Filmes | Dispensável conforme uso |
+| `com.google.android.katniss` | Assistente Google para TV | ⚠️ Impacto funcional possível |
+| `com.google.android.speech.pumpkin` | Reconhecimento de voz | ⚠️ Impacto funcional possível |
+| `com.tcl.partnercustomizer` | Personalização TCL | Dispensável conforme uso |
+| `com.tcl.tvweishi` | TV Weishi | Dispensável conforme uso |
+| `com.google.android.tv.bugreportsender` | Relatórios de erro Android TV | Dispensável conforme uso |
+| `com.tcl.partnercustomizer.resource` | Recursos da personalização TCL | Dispensável conforme uso |
+| `com.google.android.leanbacklauncher.partnerwidget` | Widget do Leanback | Dispensável conforme uso |
+| `com.google.android.leanbacklauncher.partnercustomizer` | Personalização do Leanback | Dispensável conforme uso |
+| `com.tcl.waterfall.overseas` | Recurso TCL Waterfall | Dispensável conforme uso |
+| `com.google.android.play.games` | Google Play Games | Dispensável conforme uso |
+| `com.android.printspooler` | Spooler de impressão | Dispensável conforme uso |
+| `com.google.android.tts` | Síntese de fala do Google | ⚠️ Impacto funcional possível |
+| `com.google.android.marvin.talkback` | TalkBack | ⚠️ Impacto funcional possível |
 
-**Limitações da comparação:** as medições foram feitas em momentos diferentes, algumas após reiniciar a TV, e incluem a substituição do launcher **e** outras mudanças manuais via ADB. Não representam um benchmark controlado nem comprovam uma porcentagem específica de aumento de velocidade. A memória de swap logo após o reinício também não é comparável diretamente à de uma sessão longa.
+Também retiramos **Claro TV+** (`com.claro.now.smarttvclient`) e **Pluto TV** (`tv.pluto.android`) dos apps utilizados. O registro disponível não contém o comando final desses dois; por isso não afirmamos que foram excluídos fisicamente do firmware ou que o método foi idêntico ao dos pacotes acima.
 
-> As desativações de pacotes do Android foram feitas manualmente na TV de testes e **não são aplicadas automaticamente** por este fork.
+**Precisão do registro:** quatro desativações têm saída `new state: disabled-user` preservada no histórico: `com.google.android.katniss`, `com.google.android.speech.pumpkin`, `com.tcl.tvweishi` e `com.tcl.partnercustomizer`. Os demais nomes vêm do resumo consolidado das alterações realizadas. Confirme o estado atual com `adb shell pm list packages -d` antes de repetir qualquer comando. **Não rode toda a lista em lote:** alguns serviços são necessários para voz, acessibilidade ou a Home original.
+
+**Tutorial reproduzível e reversível:** [passo a passo completo de ADB, explicação dos pacotes, comandos e recuperação](docs/OTIMIZACAO-ADB-TCL.md).
+
+### 3. Ajustes da interface e animações
+
+Verificamos as escalas globais de animação (`window_animation_scale`, `transition_animation_scale` e `animator_duration_scale`). Há registro de leitura das três em `0.0` e de um ajuste posterior para `0.5`; não temos uma conferência final do valor que permaneceu na TV. **Ambas as opções são explicadas no tutorial**. Esse ajuste pode tornar a navegação visual mais imediata, mas não altera a capacidade física do hardware.
+
+## Resultados da otimização
+
+**A TV ficou perceptivelmente mais fluida no uso relatado, e os travamentos anteriormente observados deixaram de se manifestar após as mudanças.** Além da experiência prática, obtivemos resultados objetivos:
+
+| Indicador | Original, logo após ligar | Otimizada, logo após ligar | Diferença observada |
+| --- | ---: | ---: | ---: |
+| RAM física total | 1.404 MiB | 1.404 MiB | Sem alteração |
+| **RAM disponível (`MemAvailable`)** | ~712 MiB | ~867 MiB | **+155 MiB (+21,8%)** |
+| **PSS do launcher** | ~68 MiB (Google) | ~20 MiB (CleanYourTV) | **−48 MiB (−70,6%)** |
+| **Swap em uso** | ~277 MiB | ~14,9 MiB | **−262 MiB (−94,6%)** |
+| Ocupação de `/data` | 85% | 74% | **−11 pontos percentuais** |
+| **Armazenamento livre em `/data`** | ~630 MB | ~1.000 MB | **+370 MB** |
+
+### Como a comparação foi feita
+
+**Os dois conjuntos foram coletados logo após ligar/reiniciar a mesma SEMP TCL 32S6500S**, antes e depois das alterações. Portanto, não se tratou de comparar uma TV antiga já aberta havia horas contra outra recém-iniciada. O gráfico acima resume esses resultados.
+
+A melhora de memória e armazenamento é **medida**, não apenas impressão. A diminuição dos travamentos é um **relato de uso real** no aparelho testado. Como houve mudanças simultâneas (launcher, pacotes e animações) e não fizemos várias repetições padronizadas com cronômetro e mesmos aplicativos carregados, **não atribuímos o ganho exclusivamente ao launcher**, nem declaramos uma porcentagem comprovada de aumento de velocidade. O consumo de RAM e swap continua variando com o uso.
+
+**Serviços preservados durante o projeto:** Netflix, YouTube, Prime Video, Disney+, Max, Globoplay, Apple TV, Crunchyroll, Spotify, Chromecast/cast, HDMI, TV aberta, Wi-Fi, Bluetooth, configurações e controle remoto. Nem todos foram necessariamente testados em uma única sessão; o objetivo foi manter seu funcionamento.
+
+> **Importante:** esta otimização **não requer root, overclock ou substituição do firmware**. O fork inclui a Home personalizada e a documentação, **não executa** automaticamente os comandos ADB de desativação dos pacotes.
 
 ## Tecnologias
 
